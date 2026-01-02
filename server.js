@@ -74,14 +74,19 @@ app.delete("/api/contacts/:id", async (req, res) => {
     }
 })
 
+// Root route for health check
+app.get("/", (req, res) => {
+    res.send("Contact Management API is running")
+})
+
 // Start server
-app.listen(process.env.port, async () => {
+const PORT = process.env.PORT || process.env.port || 5000
+app.listen(PORT, async () => {
     try {
         await connection
         console.log("Connected to database")
     } catch (error) {
-        console.log("Database connection failed")
+        console.log("Database connection failed:", error.message)
     }
-    console.log(`Server running on http://localhost:5000`)
+    console.log(`Server running on port ${PORT}`)
 })
-
