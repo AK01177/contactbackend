@@ -82,5 +82,6 @@ app.listen(process.env.port, async () => {
     } catch (error) {
         console.log("Database connection failed")
     }
-    console.log(`Server running on http://localhost:${process.env.port}`)
+    console.log(`Server running on http://localhost:5000`)
 })
+
