@@ -1,92 +1,102 @@
-const express = require("express")
-const mongoose = require("mongoose")
-const cors = require("cors")
-require("dotenv").config()
+const express = require("express");
+const mongoose = require("mongoose");
+const cors = require("cors");
+require("dotenv").config();
 
-const app = express()
-app.use(express.json())
-app.use(cors())
+const app = express();
+const PORT = process.env.PORT || 5000;
 
-// Database connection
-const connection = mongoose.connect(process.env.mongourl)
+// Middleware
+app.use(express.json());
+app.use(cors());
 
-// Contact Model
-const ContactSchema = mongoose.Schema({
-    firstName: {
-        type: String,
-        required: true
-    },
-    lastName: {
-        type: String,
-        required: true
-    },
-    phoneNumber: {
-        type: String,
-        required: true
-    },
-    email: {
-        type: String,
-        required: true
+// Contact Schema
+const contactSchema = new mongoose.Schema({
+  firstName: { type: String, required: true },
+  lastName: { type: String, required: true },
+  phoneNumber: { type: String, required: true },
+  email: { type: String, required: true }
+}, { timestamps: true });
+
+const Contact = mongoose.model("contact", contactSchema);
+
+// Database Connection
+const connectDB = async () => {
+  try {
+    await mongoose.connect(process.env.mongourl);
+    console.log("Connected to database");
+  } catch (err) {
+    console.log("Database connection failed:", err.message);
+    process.exit(1);
+  }
+};
+
+// Controllers
+const getContacts = async (req, res) => {
+  try {
+    const contacts = await Contact.find();
+    res.status(200).json(contacts);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+const createContact = async (req, res) => {
+  try {
+    const contact = new Contact(req.body);
+    await contact.save();
+    res.status(201).json({ message: "Contact added successfully", contact });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+const updateContact = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const contact = await Contact.findByIdAndUpdate(id, req.body, { new: true });
+    
+    if (!contact) {
+      return res.status(404).json({ error: "Contact not found" });
     }
-}, {
-    timestamps: true
-})
+    
+    res.status(200).json({ message: "Contact updated successfully", contact });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 
-const ContactModel = mongoose.model("contact", ContactSchema)
-
-// API Routes
-app.get("/api/contacts", async (req, res) => {
-    try {
-        const contacts = await ContactModel.find()
-        res.status(200).send(contacts)
-    } catch (error) {
-        res.status(500).send({ error: error.message })
+const deleteContact = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const contact = await Contact.findByIdAndDelete(id);
+    
+    if (!contact) {
+      return res.status(404).json({ error: "Contact not found" });
     }
-})
+    
+    res.status(200).json({ message: "Contact deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 
-app.post("/api/contacts", async (req, res) => {
-    try {
-        const newContact = new ContactModel(req.body)
-        await newContact.save()
-        res.status(200).send({ message: "Contact added successfully" })
-    } catch (error) {
-        res.status(500).send({ error: error.message })
-    }
-})
-
-app.put("/api/contacts/:id", async (req, res) => {
-    try {
-        const id = req.params.id
-        await ContactModel.findByIdAndUpdate(id, req.body)
-        res.status(200).send({ message: "Contact updated successfully" })
-    } catch (error) {
-        res.status(500).send({ error: error.message })
-    }
-})
-
-app.delete("/api/contacts/:id", async (req, res) => {
-    try {
-        const id = req.params.id
-        await ContactModel.findByIdAndDelete(id)
-        res.status(200).send({ message: "Contact deleted successfully" })
-    } catch (error) {
-        res.status(500).send({ error: error.message })
-    }
-})
-
-// Root route for health check
+// Routes
 app.get("/", (req, res) => {
-    res.send("Contact Management API is running")
-})
+  res.json({ message: "Contact Management API is running" });
+});
 
-// Start server
-const PORT = process.env.PORT || process.env.port || 5000
-app.listen(PORT, async () => {
-    try {
-        await connection
-        console.log("Connected to database")
-    } catch (error) {
-        console.log("Database connection failed:", error.message)
-    }
-    console.log(`Server running on port ${PORT}`)
-})
+app.get("/api/contacts", getContacts);
+app.post("/api/contacts", createContact);
+app.put("/api/contacts/:id", updateContact);
+app.delete("/api/contacts/:id", deleteContact);
+
+// Start Server
+const startServer = async () => {
+  await connectDB();
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+};
+
+startServer();
